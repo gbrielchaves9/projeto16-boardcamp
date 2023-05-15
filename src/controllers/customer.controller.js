@@ -45,3 +45,33 @@ export async function getCustomerById(req, res) {
     res.status(500).send({ error: 'Erro ao buscar o cliente.' });
   }
 }
+
+
+
+export async function updateCustomer(req, res) {
+  const customerId = req.params.id;
+  const { name, phone, cpf, birthday } = req.body;
+
+  try {
+    const { error } = updateSchemaCust.validate({ name, phone, cpf, birthday });
+    if (error) {
+      const errors = error.details.map((detail) => detail.message);
+      return res.status(400).send({ errors });
+    }
+
+    const existingCustomer = await db.query('SELECT * FROM customers WHERE cpf = $1 AND id != $2', [cpf, customerId]);
+    if (existingCustomer.rows.length > 0) {
+      return res.status(409).send({ error: 'O CPF já está associado a outro cliente.' });
+    }
+
+    await db.query(`
+      UPDATE customers
+      SET name = $1, phone = $2, cpf = $3, birthday = $4
+      WHERE id = $5;
+    `, [name, phone, cpf, birthday, customerId]);
+
+    res.sendStatus(200);
+  } catch (error) {
+    res.status(500).send({ error: 'Erro ao atualizar o cliente.' });
+  }
+}
