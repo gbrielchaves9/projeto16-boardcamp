@@ -53,25 +53,28 @@ export async function updateCustomer(req, res) {
   const { name, phone, cpf, birthday } = req.body;
 
   try {
-    const { error } = updateSchemaCust.validate({ name, phone, cpf, birthday });
-    if (error) {
-      const errors = error.details.map((detail) => detail.message);
-      return res.status(400).send({ errors });
+    // Verificar se o cliente existe
+    const existingCustomer = await db.query('SELECT * FROM customers WHERE id = $1', [customerId]);
+    if (existingCustomer.rows.length === 0) {
+      return res.status(404).send({ error: 'Cliente não encontrado.' });
     }
 
-    const existingCustomer = await db.query('SELECT * FROM customers WHERE cpf = $1 AND id != $2', [cpf, customerId]);
-    if (existingCustomer.rows.length > 0) {
-      return res.status(409).send({ error: 'O CPF já está associado a outro cliente.' });
+    // Verificar se o CPF pertence a outro cliente
+    const duplicateCPF = await db.query('SELECT * FROM customers WHERE cpf = $1 AND id != $2', [cpf, customerId]);
+    if (duplicateCPF.rows.length > 0) {
+      return res.status(409).send({ error: 'O CPF pertence a outro cliente.' });
     }
 
-    await db.query(`
-      UPDATE customers
-      SET name = $1, phone = $2, cpf = $3, birthday = $4
-      WHERE id = $5;
-    `, [name, phone, cpf, birthday, customerId]);
+    // Atualizar os dados do cliente
+    await db.query('UPDATE customers SET name = $1, phone = $2, cpf = $3, birthday = $4 WHERE id = $5', [name, phone, cpf, birthday, customerId]);
 
     res.sendStatus(200);
   } catch (error) {
     res.status(500).send({ error: 'Erro ao atualizar o cliente.' });
   }
 }
+
+
+
+
+
