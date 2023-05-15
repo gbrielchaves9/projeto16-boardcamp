@@ -28,3 +28,20 @@ export async function createCustomer(req, res) {
     res.status(500).send(error.message);
   }
 }
+
+export async function getCustomerById(req, res) {
+  const customerId = req.params.id;
+
+  try {
+    const result = await db.query('SELECT * FROM customers WHERE id = $1', [customerId]);
+    const customer = result.rows[0];
+
+    if (!customer) {
+      return res.status(404).send({ error: 'Cliente não encontrado.' });
+    }
+
+    res.send(customer);
+  } catch (error) {
+    res.status(500).send({ error: 'Erro ao buscar o cliente.' });
+  }
+}
